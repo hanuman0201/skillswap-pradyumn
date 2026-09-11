@@ -22,7 +22,6 @@ import {
   LiveListing,
   subscribeToListings,
   deleteListingFromFirestore,
-  saveListingToFirestore,
 } from '../lib/firebase';
 
 interface LiveMarketplaceProps {
@@ -126,13 +125,13 @@ export const LiveMarketplace: React.FC<LiveMarketplaceProps> = ({
     setLoading(true);
     const unsubscribe = subscribeToListings((liveItems) => {
       if (liveItems && liveItems.length > 0) {
-        setListings(liveItems);
+        // Merge real Firestore listings with starter community listings (preventing ID duplicate)
+        const liveIds = new Set(liveItems.map((item) => item.id));
+        const combined = [...liveItems, ...SEED_LISTINGS.filter((seed) => !liveIds.has(seed.id))];
+        setListings(combined);
         setLoading(false);
       } else {
-        // If the live collection is brand new and empty, seed initial community listings
-        SEED_LISTINGS.forEach((seed) => {
-          saveListingToFirestore(seed).catch(() => {});
-        });
+        // Display initial community listings purely in-memory without attempting unauthorized database writes
         setListings(SEED_LISTINGS);
         setLoading(false);
       }
@@ -144,10 +143,15 @@ export const LiveMarketplace: React.FC<LiveMarketplaceProps> = ({
   }, []);
 
   const handleDeleteListing = async (listingId: string) => {
-    if (!confirm('Are you sure you want to delete this listing from the database?')) return;
+    if (!confirm('Are you sure you want to delete this listing?')) return;
     setDeletingId(listingId);
     try {
-      await deleteListingFromFirestore(listingId);
+      if (listingId.startsWith('seed_')) {
+        // Remove starter sample listing from local state
+        setListings((prev) => prev.filter((item) => item.id !== listingId));
+      } else {
+        await deleteListingFromFirestore(listingId);
+      }
     } catch (err) {
       console.error('Failed to delete listing:', err);
       alert('Could not delete listing. Please check permissions.');

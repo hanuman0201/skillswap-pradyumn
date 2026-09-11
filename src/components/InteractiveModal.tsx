@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, Sparkles, ArrowRight, LogIn, UserCheck, Shield, AlertCircle, Loader2 } from 'lucide-react';
+import { X, CheckCircle2, Sparkles, ArrowRight, LogIn, UserCheck, Shield, AlertCircle, Loader2, Copy, Check, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserProfile, DEFAULT_USER, createInitialUserProfile } from '../types';
 import {
@@ -39,6 +39,7 @@ export const InteractiveModal: React.FC<ModalProps> = ({
   const [googleLoading, setGoogleLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [copiedDomain, setCopiedDomain] = useState(false);
 
   React.useEffect(() => {
     if (initialSkillToLearn) {
@@ -75,9 +76,19 @@ export const InteractiveModal: React.FC<ModalProps> = ({
       }
     } catch (err: unknown) {
       console.error('Google Sign In failed:', err);
-      setAuthError(
-        err instanceof Error ? err.message : 'Google authentication failed. Please try again.'
-      );
+      let msg = 'Google authentication failed. Please try again.';
+      if (err instanceof Error) {
+        if (err.message.includes('unauthorized-domain')) {
+          msg = `UNAUTHORIZED_DOMAIN: Domain "${window.location.hostname}" is not authorized in Firebase Authentication. To enable Google Sign-In on GitHub Pages, add "${window.location.hostname}" to Firebase Console -> Authentication -> Settings -> Authorized Domains.`;
+        } else if (err.message.includes('popup-closed-by-user')) {
+          msg = 'Sign-in popup was closed before completing. Please try again.';
+        } else if (err.message.includes('popup-blocked')) {
+          msg = 'Sign-in popup was blocked by your browser. Please allow popups for this site.';
+        } else {
+          msg = err.message;
+        }
+      }
+      setAuthError(msg);
     } finally {
       setGoogleLoading(false);
     }
@@ -158,7 +169,11 @@ export const InteractiveModal: React.FC<ModalProps> = ({
       console.error('Email auth failed:', err);
       let msg = 'Authentication failed. Please check credentials.';
       if (err instanceof Error) {
-        if (err.message.includes('invalid-credential') || err.message.includes('user-not-found')) {
+        if (err.message.includes('operation-not-allowed')) {
+          msg = 'Email/Password sign-in is disabled in your Firebase project. Enable it in Firebase Console -> Authentication -> Sign-in method, or sign in using Google.';
+        } else if (err.message.includes('unauthorized-domain')) {
+          msg = `UNAUTHORIZED_DOMAIN: Domain "${window.location.hostname}" is not authorized in Firebase Authentication. Add "${window.location.hostname}" to Firebase Console -> Authentication -> Settings -> Authorized Domains.`;
+        } else if (err.message.includes('invalid-credential') || err.message.includes('user-not-found') || err.message.includes('wrong-password')) {
           msg = 'Invalid email or password. If you don’t have an account, switch to "Sign Up" above.';
         } else if (err.message.includes('email-already-in-use')) {
           msg = 'This email already has an account. Please switch to "Log In" above.';
@@ -309,10 +324,47 @@ export const InteractiveModal: React.FC<ModalProps> = ({
                 </p>
 
                 {authError && (
-                  <div className="p-3 mb-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{authError}</span>
-                  </div>
+                  authError.startsWith('UNAUTHORIZED_DOMAIN:') ? (
+                    <div className="p-3.5 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex flex-col gap-2">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+                        <div className="space-y-1">
+                          <p className="font-semibold text-amber-300">GitHub Pages Domain Not Yet Authorized in Firebase</p>
+                          <p className="text-white/80 leading-relaxed text-[11px]">
+                            Google OAuth requires adding your GitHub Pages domain (<span className="font-mono text-amber-300 px-1 py-0.5 rounded bg-black/40">{window.location.hostname}</span>) to Authorized Domains.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1 border-t border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(window.location.hostname);
+                            setCopiedDomain(true);
+                            setTimeout(() => setCopiedDomain(false), 2000);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          {copiedDomain ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-white/70" />}
+                          <span>{copiedDomain ? 'Copied Hostname!' : 'Copy Hostname'}</span>
+                        </button>
+                        <a
+                          href="https://console.firebase.google.com/project/ai-studio-applet-webapp-e61ea/authentication/settings"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1 rounded-lg bg-amber-400 text-black text-[11px] font-semibold hover:bg-amber-300 flex items-center gap-1 transition-colors cursor-pointer ml-auto"
+                        >
+                          <span>Open Firebase Settings</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 mb-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{authError}</span>
+                    </div>
+                  )
                 )}
 
                 {/* Real Firebase Google Sign-In Button */}
