@@ -252,8 +252,25 @@ export async function updateUserProfileInFirestore(
 export async function saveListingToFirestore(listing: LiveListing): Promise<void> {
   const path = `listings/${listing.id}`;
   try {
-    const listingRef = doc(db, 'listings', listing.id);
-    await setDoc(listingRef, listing);
+    // Ensure authorId matches the current authenticated UID
+    const currentUid = auth.currentUser?.uid;
+    const sanitizedListing: LiveListing = {
+      ...listing,
+      authorId: currentUid || listing.authorId,
+      authorName: (listing.authorName || 'SkillSpace Member').trim().substring(0, 100),
+      title: (listing.title || '').trim().substring(0, 150),
+      description: (listing.description || '').trim().substring(0, 2000),
+      category: (listing.category || 'Engineering & Web Development').trim().substring(0, 60),
+      skillsOffered: listing.skillsOffered || '',
+      skillsWanted: listing.skillsWanted || '',
+      type: listing.type === 'learn' ? 'learn' : 'teach',
+      tradeType: listing.tradeType || 'both',
+      coinsRate: Number(listing.coinsRate) || 40,
+      createdAt: listing.createdAt || new Date().toISOString(),
+    };
+
+    const listingRef = doc(db, 'listings', sanitizedListing.id);
+    await setDoc(listingRef, sanitizedListing);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -274,21 +291,31 @@ export function subscribeToListings(
 ): Unsubscribe {
   const path = 'listings';
   try {
-    const q = query(collection(db, path), orderBy('createdAt', 'desc'));
+    const colRef = collection(db, path);
     return onSnapshot(
-      q,
+      colRef,
       (snapshot) => {
         const items: LiveListing[] = [];
         snapshot.forEach((docSnap) => {
-          items.push(docSnap.data() as LiveListing);
+          if (docSnap.exists()) {
+            const data = docSnap.data() as LiveListing;
+            items.push(data);
+          }
+        });
+        // Sort chronologically newest first
+        items.sort((a, b) => {
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return timeB - timeA;
         });
         onUpdate(items);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, path);
+        console.warn('Listing snapshot notice:', error);
       }
     );
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
+    console.warn('Listing subscription initialization notice:', error);
+    return () => {};
   }
 }
