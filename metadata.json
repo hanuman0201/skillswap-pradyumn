@@ -1,0 +1,6 @@
+{
+  "name": "SkillSpace",
+  "description": "Discover SkillSpace: the world’s first global peer-to-peer learning platform where skills are traded, not sold. Learn, teach, grow — without boundaries.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
