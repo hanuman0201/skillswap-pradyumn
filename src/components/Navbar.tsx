@@ -31,6 +31,7 @@ interface NavbarProps {
   currentUser?: UserProfile | null;
   onOpenProfile?: () => void;
   onLogout?: () => void;
+  onOpenCreateListing?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -42,6 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   onOpenProfile,
   onLogout,
+  onOpenCreateListing,
 }) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -273,10 +275,28 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Sparkles className="w-4 h-4 text-white/70" />
             <span>Teach</span>
           </button>
+
+          {/* Live Marketplace Nav Item */}
+          <button
+            onClick={() => onNavigateSection('live-marketplace')}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 rounded-xl transition-all cursor-pointer"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[#08f7bf] animate-pulse" />
+            <span>Marketplace</span>
+          </button>
         </nav>
 
         {/* Action Button & Mobile Menu Toggle */}
         <div className="flex items-center gap-3">
+          {/* Post Listing shortcut button */}
+          <button
+            onClick={currentUser ? onOpenCreateListing : onOpenAuth}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#08f7bf]/15 hover:bg-[#08f7bf]/25 border border-[#08f7bf]/40 text-[#08f7bf] text-xs font-semibold transition-all cursor-pointer shadow-[0_0_15px_rgba(8,247,191,0.15)]"
+          >
+            <span className="text-sm leading-none">+</span>
+            <span>Post Listing</span>
+          </button>
+
           {currentUser ? (
             <div className="relative" ref={profileRef}>
               <button
@@ -325,6 +345,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <span className="font-bold">{currentUser.credits} Pts</span>
                       </div>
                     </div>
+
+                    <button
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        onOpenCreateListing?.();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-[#08f7bf] hover:bg-[#08f7bf]/10 text-left transition-all cursor-pointer font-medium"
+                    >
+                      <span className="text-sm font-bold leading-none">+</span>
+                      <span>Post New Listing</span>
+                    </button>
 
                     <button
                       onClick={() => {

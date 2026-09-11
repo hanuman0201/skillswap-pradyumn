@@ -13,7 +13,11 @@ import { CTASection } from './components/CTASection';
 import { Footer } from './components/Footer';
 import { InteractiveModal } from './components/InteractiveModal';
 import { TeachModal } from './components/TeachModal';
+import { LiveMarketplace } from './components/LiveMarketplace';
+import { CreateListingModal } from './components/CreateListingModal';
 import { UserProfile, DEFAULT_USER } from './types';
+import { auth, signOutUser } from './lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'home' | 'learn' | 'teach' | 'profile'>(() => {
@@ -42,6 +46,37 @@ export default function App() {
   const [modalType, setModalType] = useState<'access' | 'story' | 'features' | 'login'>('access');
   const [selectedSkillForSwap, setSelectedSkillForSwap] = useState('');
   const [teachModalOpen, setTeachModalOpen] = useState(false);
+  const [createListingModalOpen, setCreateListingModalOpen] = useState(false);
+
+  // Sync with real Firebase Auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setCurrentUser((prev) => {
+          if (prev && prev.id === firebaseUser.uid) return prev;
+          const userObj: UserProfile = {
+            ...DEFAULT_USER,
+            id: firebaseUser.uid,
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Community Member',
+            email: firebaseUser.email || '',
+            initials: (firebaseUser.displayName || firebaseUser.email?.slice(0, 2) || 'SS')
+              .slice(0, 2)
+              .toUpperCase(),
+            avatar:
+              firebaseUser.photoURL ||
+              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+            coins: prev?.coins ?? 240,
+            credits: prev?.credits ?? 240,
+          };
+          try {
+            localStorage.setItem('skillspace_user', JSON.stringify(userObj));
+          } catch {}
+          return userObj;
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -105,7 +140,12 @@ export default function App() {
     navigateToProfile();
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await signOutUser();
+    } catch (e) {
+      console.error('Sign out error:', e);
+    }
     setCurrentUser(null);
     try {
       localStorage.removeItem('skillspace_user');
@@ -113,6 +153,14 @@ export default function App() {
       // ignore
     }
     navigateToHome();
+  };
+
+  const handleOpenCreateListing = () => {
+    if (!currentUser) {
+      handleOpenAuth('Sign in to post a skill listing');
+      return;
+    }
+    setCreateListingModalOpen(true);
   };
 
   const handleUpdateUser = (updatedUser: UserProfile) => {
@@ -263,6 +311,7 @@ export default function App() {
         currentUser={currentUser}
         onOpenProfile={navigateToProfile}
         onLogout={handleLogout}
+        onOpenCreateListing={handleOpenCreateListing}
       />
 
       {/* Main Page Sections */}
@@ -284,22 +333,32 @@ export default function App() {
           onHowItWorks={() => scrollToSection('features')}
         />
 
-        {/* 4. Deep Dive Interactive Features */}
+        {/* 4. Live Cloud Marketplace (Real-Time Cloud Firestore Multi-User Listings) */}
+        <LiveMarketplace
+          currentUser={currentUser}
+          onOpenCreateListing={handleOpenCreateListing}
+          onOpenAuth={() => handleOpenAuth('Sign In to Create Listings')}
+          onOpenMessengerWithUser={(contactName, initialMsg) => {
+            navigateToTeach();
+          }}
+        />
+
+        {/* 5. Deep Dive Interactive Features */}
         <InteractiveFeatures
           onOpenAuth={() => handleOpenAuth('Join SkillSpace Network')}
           currentUser={currentUser}
           onUpdateUser={handleUpdateUser}
         />
 
-        {/* 5. Community Trust & Philosophy */}
+        {/* 6. Community Trust & Philosophy */}
         <CommunityTrust />
 
-        {/* 6. Testimonials Ticker */}
+        {/* 7. Testimonials Ticker */}
         <Testimonials
           onOpenAuth={() => handleOpenAuth('Join the Community')}
         />
 
-        {/* 7. Pre-Footer Call to Action */}
+        {/* 8. Pre-Footer Call to Action */}
         <CTASection
           onOpenAuth={() => handleOpenAuth('Get Instant Access')}
         />
@@ -309,6 +368,14 @@ export default function App() {
       <Footer
         onNavigateSection={scrollToSection}
         onOpenLegal={handleOpenLegalOrInfo}
+      />
+
+      {/* Cloud Firestore: Create Listing Modal */}
+      <CreateListingModal
+        isOpen={createListingModalOpen}
+        onClose={() => setCreateListingModalOpen(false)}
+        currentUser={currentUser}
+        onOpenAuth={() => handleOpenAuth('Sign in to publish a listing')}
       />
 
       {/* Standard Interactive Modal */}

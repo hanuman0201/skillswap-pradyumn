@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, Sparkles, ArrowRight, LogIn, UserCheck, Shield } from 'lucide-react';
+import { X, CheckCircle2, Sparkles, ArrowRight, LogIn, UserCheck, Shield, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserProfile, DEFAULT_USER } from '../types';
+import { signInWithGoogle, saveUserProfileToFirestore } from '../lib/firebase';
 
 interface ModalProps {
   isOpen: boolean;
@@ -29,6 +30,8 @@ export const InteractiveModal: React.FC<ModalProps> = ({
   const [teachCoinsWanted, setTeachCoinsWanted] = useState<number>(25);
   const [skillToLearn, setSkillToLearn] = useState(initialSkillToLearn);
   const [learnCoinsOffered, setLearnCoinsOffered] = useState<number>(20);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
 
   React.useEffect(() => {
     if (initialSkillToLearn) {
@@ -41,6 +44,37 @@ export const InteractiveModal: React.FC<ModalProps> = ({
       setAuthMode('login');
     }
   }, [type]);
+
+  const handleGoogleAuth = async () => {
+    setGoogleLoading(true);
+    setAuthError('');
+    try {
+      const user = await signInWithGoogle();
+      if (onLoginSuccess && user) {
+        const appUser: UserProfile = {
+          ...DEFAULT_USER,
+          id: user.uid,
+          name: user.displayName || user.email?.split('@')[0] || 'Community Member',
+          email: user.email || '',
+          initials: (user.displayName || user.email?.slice(0, 2) || 'SS').slice(0, 2).toUpperCase(),
+          avatar:
+            user.photoURL ||
+            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+          coins: 240, // Standard starter balance
+          credits: 240,
+        };
+        onLoginSuccess(appUser);
+        onClose();
+      }
+    } catch (err: unknown) {
+      console.error('Google Sign In failed:', err);
+      setAuthError(
+        err instanceof Error ? err.message : 'Google authentication failed. Please try again.'
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,8 +256,49 @@ export const InteractiveModal: React.FC<ModalProps> = ({
                     : 'Join the global peer-to-peer exchange network. Skills are traded, not sold.'}
                 </p>
 
+                {authError && (
+                  <div className="p-3 mb-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{authError}</span>
+                  </div>
+                )}
+
+                {/* Real Firebase Google Sign-In Button */}
+                <button
+                  type="button"
+                  onClick={handleGoogleAuth}
+                  disabled={googleLoading}
+                  className="w-full mb-3 py-2.5 px-4 rounded-xl bg-white hover:bg-white/90 text-black text-xs font-semibold flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-md disabled:opacity-50"
+                >
+                  {googleLoading ? (
+                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path
+                        fill="#EA4335"
+                        d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"
+                      />
+                      <path
+                        fill="#4285F4"
+                        d="M23.5 12.3c0-.8-.1-1.7-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3 0-.8.1-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.2c0 2.8.7 5.5 1.9 7.8l3.7-2.9z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16.5C3.7 20.2 7.5 23.5 12 23.5z"
+                      />
+                    </svg>
+                  )}
+                  <span>
+                    {authMode === 'login' ? 'Continue with Google' : 'Sign Up with Google'}
+                  </span>
+                </button>
+
                 {/* Quick 1-Click Demo Login Banner */}
-                <div className="p-3.5 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-all mb-5 flex items-center justify-between gap-3">
+                <div className="p-3 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-all mb-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <img
                       src={DEFAULT_USER.avatar}

@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "Listing": {
+      "title": "Listing",
+      "description": "A skill exchange listing for teaching or learning skills with barter or 40-coin rate",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier of the listing" },
+        "title": { "type": "string", "description": "Title of the skill listing", "maxLength": 150 },
+        "description": { "type": "string", "description": "Details about what is taught or sought", "maxLength": 2000 },
+        "type": { "type": "string", "enum": ["teach", "learn"], "description": "Whether offering to teach or looking to learn" },
+        "category": { "type": "string", "description": "Skill domain category", "maxLength": 60 },
+        "skillsOffered": { "type": "string", "description": "Skills taught or exchanged", "maxLength": 200 },
+        "skillsWanted": { "type": "string", "description": "Skills desired or barter request", "maxLength": 200 },
+        "tradeType": { "type": "string", "enum": ["coins", "barter", "both"], "description": "Standard 40 coins, direct barter, or both" },
+        "coinsRate": { "type": "number", "description": "Coins rate per session (standard 40)" },
+        "authorId": { "type": "string", "description": "User ID of creator", "maxLength": 128 },
+        "authorName": { "type": "string", "description": "Display name of creator", "maxLength": 100 },
+        "authorAvatar": { "type": "string", "description": "Avatar image URL", "maxLength": 500 },
+        "authorEmail": { "type": "string", "description": "Email address of creator", "maxLength": 150 },
+        "createdAt": { "type": "string", "description": "Server timestamp of creation" },
+        "updatedAt": { "type": "string", "description": "Server timestamp of last update" }
+      },
+      "required": ["id", "title", "description", "type", "category", "tradeType", "authorId", "authorName", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile and wallet credits",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "User UID", "maxLength": 128 },
+        "displayName": { "type": "string", "description": "User display name", "maxLength": 100 },
+        "email": { "type": "string", "description": "User email address", "maxLength": 150 },
+        "photoURL": { "type": "string", "description": "Avatar photo URL", "maxLength": 500 },
+        "bio": { "type": "string", "description": "Short bio", "maxLength": 500 },
+        "coins": { "type": "number", "description": "SkillCoin and Barter Credit balance" },
+        "createdAt": { "type": "string", "description": "Server timestamp of account creation" }
+      },
+      "required": ["id", "displayName", "email", "coins", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/listings/{listingId}": {
+      "schema": "Listing",
+      "description": "Public skill exchange listings visible to all visitors and users"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document storing public profile and coin balance"
+    }
+  }
+}
