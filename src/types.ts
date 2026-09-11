@@ -120,8 +120,8 @@ export const DEFAULT_USER: UserProfile = {
   bio: 'Senior Full-Stack Engineer & Generative AI enthusiast. Exchanging distributed systems architecture & Next.js for Japanese conversation & analog synth sound design.',
   location: 'San Francisco, CA & Remote',
   memberSince: 'March 2024',
-  credits: 250,
-  coins: 180,
+  credits: 240, // Coins and barter credits are the same currency (240 SkillCoins / Barter Credits)
+  coins: 240, // 40 coins to learn, 40 coins to teach in case of no double coincidence
   hoursTaught: 38,
   hoursLearned: 24,
   rating: 4.98,
@@ -132,7 +132,7 @@ export const DEFAULT_USER: UserProfile = {
       name: 'Full-Stack Next.js 15 & Server Components',
       level: 'Expert',
       sessionsCount: 19,
-      coinsWanted: 30,
+      coinsWanted: 40,
       tradeMode: 'both',
     },
     {
@@ -140,7 +140,7 @@ export const DEFAULT_USER: UserProfile = {
       name: 'Vector Embeddings & RAG Architectures',
       level: 'Advanced',
       sessionsCount: 12,
-      coinsWanted: 25,
+      coinsWanted: 40,
       tradeMode: 'both',
     },
     {
@@ -148,7 +148,7 @@ export const DEFAULT_USER: UserProfile = {
       name: 'TypeScript & Type-Level Programming',
       level: 'Expert',
       sessionsCount: 7,
-      coinsWanted: 20,
+      coinsWanted: 40,
       tradeMode: 'coins',
     },
   ],
@@ -158,7 +158,7 @@ export const DEFAULT_USER: UserProfile = {
       name: 'Conversational Japanese (JLPT N2)',
       target: 'Natural Pitch Accent',
       progress: 65,
-      coinsOffered: 25,
+      coinsOffered: 40,
       tradeMode: 'both',
     },
     {
@@ -166,7 +166,7 @@ export const DEFAULT_USER: UserProfile = {
       name: 'Subtractive Sound Design & Synthesizers',
       target: 'Patching Eurorack',
       progress: 40,
-      coinsOffered: 20,
+      coinsOffered: 40,
       tradeMode: 'coins',
     },
     {
@@ -174,7 +174,7 @@ export const DEFAULT_USER: UserProfile = {
       name: '3D Procedural Motion in Blender',
       target: 'Geometry Nodes',
       progress: 25,
-      coinsOffered: 30,
+      coinsOffered: 40,
       tradeMode: 'barter',
     },
   ],

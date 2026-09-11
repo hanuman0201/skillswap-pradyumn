@@ -17,52 +17,66 @@ import {
   MATCH_PROFILES,
   INITIAL_CHAT_MESSAGES,
   SESSION_REQUESTS,
-  ACTIVITY_LOGS,
   BADGES,
 } from '../data/mockData';
+import { UserProfile } from '../types';
+import { WhatsAppMessenger } from './WhatsAppMessenger';
 
 interface InteractiveFeaturesProps {
   onOpenAuth: () => void;
+  currentUser?: UserProfile | null;
+  onUpdateUser?: (updated: UserProfile) => void;
 }
 
-export const InteractiveFeatures: React.FC<InteractiveFeaturesProps> = ({ onOpenAuth }) => {
+export const InteractiveFeatures: React.FC<InteractiveFeaturesProps> = ({
+  onOpenAuth,
+  currentUser,
+  onUpdateUser,
+}) => {
   // State for AI Matchmaking
   const [selectedProfileIndex, setSelectedProfileIndex] = useState(0);
   const activeProfile = MATCH_PROFILES[selectedProfileIndex];
-
-  // State for Messenger interactive session request
-  const [sessionActionTaken, setSessionActionTaken] = useState<'none' | 'accepted' | 'declined'>('none');
-  const [chatMessages, setChatMessages] = useState(INITIAL_CHAT_MESSAGES);
-  const [newMessageText, setNewMessageText] = useState('');
 
   // State for Calendar tab & requests
   const [calendarTab, setCalendarTab] = useState<'upcoming' | 'requests' | 'history'>('requests');
   const [selectedDay, setSelectedDay] = useState(17);
   const [requestsList, setRequestsList] = useState(SESSION_REQUESTS);
 
-  // State for Points / Wallet
-  const [walletBalance, setWalletBalance] = useState(1550);
-  const [activityList, setActivityList] = useState(ACTIVITY_LOGS);
+  // State for Points / Wallet (40 Coins Unified System)
+  const [walletBalance, setWalletBalance] = useState(currentUser?.coins ?? 240);
+  const [activityList, setActivityList] = useState([
+    {
+      id: 'act-1',
+      title: 'Taught: Next.js 15 Server Actions',
+      type: 'earn' as const,
+      points: 40,
+      category: '1-on-1 Teaching',
+    },
+    {
+      id: 'act-2',
+      title: 'Learned: Japanese Pitch Accent',
+      type: 'spend' as const,
+      points: 40,
+      category: '1-on-1 Learning',
+    },
+    {
+      id: 'act-3',
+      title: 'Taught: TypeScript Type Gymnastics',
+      type: 'earn' as const,
+      points: 40,
+      category: '1-on-1 Teaching',
+    },
+    {
+      id: 'act-4',
+      title: '1:1 Direct Barter: Swift for Figma',
+      type: 'earn' as const,
+      points: 0,
+      category: 'Double Coincidence Swap',
+    },
+  ]);
 
   // State for Selected Badge
   const [selectedBadge, setSelectedBadge] = useState(BADGES[0]);
-
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessageText.trim()) return;
-
-    const newMsg = {
-      id: `msg-${Date.now()}`,
-      sender: 'user' as const,
-      name: 'Noor',
-      avatar: 'https://framerusercontent.com/images/ktlwDnBdDy7e82bDH8fM8E3DP8.png',
-      text: newMessageText,
-      time: 'Just now',
-    };
-
-    setChatMessages([...chatMessages, newMsg]);
-    setNewMessageText('');
-  };
 
   const handleRequestAction = (id: string, action: 'accepted' | 'declined') => {
     setRequestsList((prev) =>
@@ -71,14 +85,14 @@ export const InteractiveFeatures: React.FC<InteractiveFeaturesProps> = ({ onOpen
   };
 
   const handleTopUpMock = () => {
-    setWalletBalance((prev) => prev + 350);
+    setWalletBalance((prev) => prev + 40);
     setActivityList((prev) => [
       {
         id: `act-${Date.now()}`,
-        title: 'Community Contribution Bonus',
+        title: 'Taught Community Workshop',
         type: 'earn',
-        points: 350,
-        category: 'Incentive',
+        points: 40,
+        category: 'Peer Teaching',
       },
       ...prev,
     ]);
@@ -233,162 +247,36 @@ export const InteractiveFeatures: React.FC<InteractiveFeaturesProps> = ({ onOpen
         </div>
 
         {/* ---------------------------------------------------- */}
-        {/* FEATURE 2: Built-in Messenger */}
+        {/* FEATURE 2: WhatsApp-Style Messenger */}
         {/* ---------------------------------------------------- */}
-        <div id="messenger" className="rounded-3xl border border-white/10 bg-[#0d0d0d] p-6 sm:p-10 lg:p-12 overflow-hidden shadow-2xl">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Interactive Chat Window */}
-            <div className="lg:col-span-7 order-2 lg:order-1 flex justify-center w-full">
-              <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#141517] overflow-hidden flex flex-col h-[480px] shadow-2xl">
-                {/* Chat Top Bar */}
-                <div className="flex items-center justify-between px-4 py-3 bg-[#1c1e21] border-b border-white/10">
-                  <div className="flex items-center gap-2.5">
-                    <img
-                      src="https://framerusercontent.com/images/jYZcWolHIxpvAZUaqmToDEsdeE.png"
-                      alt="William"
-                      className="w-8 h-8 rounded-full object-cover border border-white/20"
-                    />
-                    <div>
-                      <div className="text-xs font-semibold text-white">William • React &amp; Python</div>
-                      <div className="text-[10px] text-emerald-400 flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                        Online now
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] text-white/40">100% Match</span>
-                </div>
-
-                {/* Messages feed */}
-                <div className="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
-                  {chatMessages.map((msg) => {
-                    const isMe = msg.sender === 'user';
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex gap-2.5 ${isMe ? 'justify-end' : 'justify-start'}`}
-                      >
-                        {!isMe && (
-                          <img
-                            src={msg.avatar}
-                            alt={msg.name}
-                            className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5"
-                          />
-                        )}
-
-                        <div className="max-w-[78%]">
-                          <div
-                            className={`p-3 rounded-2xl leading-relaxed ${
-                              isMe
-                                ? 'bg-[#3d9be9] text-white rounded-br-xs'
-                                : 'bg-white/10 text-white/90 rounded-bl-xs border border-white/5'
-                            }`}
-                          >
-                            <p>{msg.text}</p>
-
-                            {/* If session request card */}
-                            {msg.isSessionRequest && (
-                              <div className="mt-2.5 pt-2 border-t border-white/20 space-y-2">
-                                <div className="text-[11px] font-semibold text-white">
-                                  Proposed: {msg.sessionData?.date} at {msg.sessionData?.time}
-                                </div>
-                                {sessionActionTaken === 'none' ? (
-                                  <div className="flex items-center gap-2 pt-1">
-                                    <button
-                                      onClick={() => setSessionActionTaken('accepted')}
-                                      className="flex-1 rounded-full bg-white text-black font-semibold py-1 px-3 text-[11px] hover:bg-white/90 flex items-center justify-center gap-1"
-                                    >
-                                      <Check className="w-3 h-3" />
-                                      Accept
-                                    </button>
-                                    <button
-                                      onClick={() => setSessionActionTaken('declined')}
-                                      className="flex-1 rounded-full bg-white/15 text-white py-1 px-3 text-[11px] hover:bg-white/25 flex items-center justify-center gap-1"
-                                    >
-                                      <X className="w-3 h-3" />
-                                      Decline
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="text-[11px] font-medium py-1 px-2.5 rounded-lg bg-black/30 inline-block text-white/90">
-                                    {sessionActionTaken === 'accepted' ? '✓ Session Confirmed & Added to Calendar' : '✗ Request Declined'}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <span className="text-[9px] text-white/40 mt-1 block px-1 text-right">
-                            {msg.time}
-                          </span>
-                        </div>
-
-                        {isMe && (
-                          <img
-                            src="https://framerusercontent.com/images/ktlwDnBdDy7e82bDH8fM8E3DP8.png"
-                            alt="Noor"
-                            className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5"
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Chat input form */}
-                <form
-                  onSubmit={handleSendMessage}
-                  className="p-3 bg-[#18191c] border-t border-white/10 flex items-center gap-2"
-                >
-                  <input
-                    type="text"
-                    value={newMessageText}
-                    onChange={(e) => setNewMessageText(e.target.value)}
-                    placeholder="Type a message or suggest a time..."
-                    className="flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-white placeholder:text-white/40 focus:border-[#3d9be9] focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    className="h-8 w-8 rounded-full bg-[#3d9be9] hover:bg-[#2a7dd7] flex items-center justify-center text-white shrink-0 transition-colors"
-                    aria-label="Send message"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
-                </form>
-              </div>
-            </div>
-
-            {/* Right Copy */}
-            <div className="lg:col-span-5 order-1 lg:order-2 space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs text-[#3d9be9]">
+        <div id="messenger" className="rounded-3xl border border-white/10 bg-[#0d0d0d] p-6 sm:p-8 lg:p-10 overflow-hidden shadow-2xl">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#08f7bf]/30 bg-[#08f7bf]/10 px-3 py-1 text-xs text-[#08f7bf] mb-2 font-mono">
                 <MessageSquare className="w-3.5 h-3.5" />
-                <span>Feature 02</span>
+                <span>WhatsApp Desktop &bull; SkillSpace Exchange</span>
               </div>
-              <h3 className="text-3xl sm:text-4xl font-bold tracking-tight">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-[#3d9be9]">
-                  Built-in Messenger
-                </span>
+              <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                Select Your Peer &bull; Real-Time Chat &amp; 40-Coin Escrow
               </h3>
-              <p className="text-base text-white/70 leading-relaxed font-['General_Sans',sans-serif]">
-                Chat with your matches in <strong className="text-white font-medium">real time</strong>,
-                send images, documents, and <strong className="text-white font-medium">schedule sessions</strong>{' '}
-                — all in one smooth, built-in messenger.
+              <p className="text-sm text-white/70 max-w-2xl mt-1">
+                Select who you are talking to from your active contacts list. Chat in real time, coordinate 1:1 skill swaps, or trade using the standard <strong className="text-amber-300">40 coins/credits</strong> when there is no double coincidence of wants.
               </p>
-              <div className="pt-2 flex flex-col gap-2.5 text-xs text-white/60">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-[#3d9be9]" />
-                  <span>Direct 1-click calendar invites inside conversations</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-[#3d9be9]" />
-                  <span>No external WhatsApp or Zoom link scrambling required</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-[#3d9be9]" />
-                  <span>Integrated peer review &amp; point release upon call completion</span>
-                </div>
-              </div>
+            </div>
+            <div className="flex items-center gap-3 text-xs font-mono text-white/50 shrink-0">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                <ShieldCheck className="w-4 h-4 text-[#08f7bf]" />
+                End-to-End Encrypted
+              </span>
             </div>
           </div>
+
+          {/* WhatsApp Messenger Component with Contact Selection on Left */}
+          <WhatsAppMessenger
+            currentUser={currentUser}
+            onUpdateUser={onUpdateUser}
+            variant="compact"
+          />
         </div>
 
         {/* ---------------------------------------------------- */}
@@ -559,28 +447,33 @@ export const InteractiveFeatures: React.FC<InteractiveFeaturesProps> = ({ onOpen
                 {/* Top Wallet Info */}
                 <div className="flex items-center justify-between border-b border-white/10 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-[#3d9be9]/20 border border-[#3d9be9]/40 flex items-center justify-center text-[#3d9be9]">
+                    <div className="h-10 w-10 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
                       <Coins className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="text-xs text-white/50 font-medium">SkillSwap Balance</div>
-                      <div className="text-2xl font-bold text-white tracking-tight">
-                        {walletBalance.toLocaleString()} <span className="text-sm font-normal text-[#3d9be9]">Points</span>
+                      <div className="text-xs text-white/50 font-medium">SkillCoins / Barter Credits</div>
+                      <div className="text-2xl font-bold text-amber-300 tracking-tight flex items-baseline gap-1.5">
+                        🪙 {walletBalance.toLocaleString()} <span className="text-xs font-normal text-white/60">(Coins &amp; Credits are identical)</span>
                       </div>
                     </div>
                   </div>
 
                   <button
                     onClick={handleTopUpMock}
-                    className="rounded-full bg-[#3d9be9] hover:bg-[#2a7dd7] px-3.5 py-1.5 text-xs font-medium text-white transition-all shadow-sm"
+                    className="rounded-full bg-amber-500 hover:bg-amber-400 px-3.5 py-1.5 text-xs font-semibold text-black transition-all shadow-sm cursor-pointer"
                   >
-                    + Add Bonus
+                    +40 Coins
                   </button>
                 </div>
 
-                <div className="mt-3 text-xs text-white/60 bg-white/5 rounded-xl p-2.5 flex items-center justify-between">
-                  <span>Standard Exchange Rate:</span>
-                  <span className="text-white font-medium">1 Session = 350 Points</span>
+                <div className="mt-3 text-xs text-white/80 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 space-y-1">
+                  <div className="flex items-center justify-between font-semibold text-amber-300">
+                    <span>Standard Network Rate:</span>
+                    <span>40 Coins per Session</span>
+                  </div>
+                  <p className="text-[11px] text-white/60 leading-relaxed">
+                    Spend 40 to learn &bull; Get 40 to teach. Perfect for when there is no direct reciprocal swap (no double coincidence of wants).
+                  </p>
                 </div>
 
                 {/* Activity Feed */}
@@ -607,21 +500,21 @@ export const InteractiveFeatures: React.FC<InteractiveFeaturesProps> = ({ onOpen
                       </div>
 
                       <span
-                        className={`font-semibold ${
+                        className={`font-semibold font-mono ${
                           act.type === 'earn' ? 'text-emerald-400' : 'text-rose-400'
                         }`}
                       >
-                        {act.type === 'earn' ? `+${act.points}` : `-${act.points}`}
+                        {act.type === 'earn' ? `+${act.points} Coins` : `-${act.points} Coins`}
                       </span>
                     </div>
                   ))}
                 </div>
 
                 <div className="mt-5 pt-3 border-t border-white/10 flex justify-between items-center text-xs">
-                  <span className="text-white/50">Zero platform commissions</span>
+                  <span className="text-white/50">Zero platform commissions &bull; 40 coins fixed</span>
                   <button
                     onClick={onOpenAuth}
-                    className="text-[#3d9be9] hover:underline font-medium"
+                    className="text-amber-400 hover:underline font-medium cursor-pointer"
                   >
                     View ledger history →
                   </button>
@@ -631,24 +524,33 @@ export const InteractiveFeatures: React.FC<InteractiveFeaturesProps> = ({ onOpen
 
             {/* Right Copy */}
             <div className="lg:col-span-5 order-1 lg:order-2 space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs text-[#3d9be9]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-amber-300">
                 <Coins className="w-3.5 h-3.5" />
-                <span>Feature 04</span>
+                <span>Feature 04 &bull; Unified Coin &amp; Barter Currency</span>
               </div>
-              <h3 className="text-3xl sm:text-4xl font-bold tracking-tight">
-                Learn by Giving.{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-[#3d9be9]">
-                  Teach to Earn.
+              <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+                No Double Coincidence?{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-amber-500">
+                  Coins Solve It.
                 </span>
               </h3>
               <p className="text-base text-white/70 leading-relaxed font-['General_Sans',sans-serif]">
-                Earn points <strong className="text-white font-medium">for every session</strong> you teach.
-                Spend them to book sessions when you’re ready to learn —{' '}
-                <strong className="text-white font-medium">no payment systems</strong>, just fair exchange.
+                Coins and barter credits are the <strong className="text-white font-medium">exact same currency</strong>.
+                In classic barter, you need both parties to want each other’s skills (a double coincidence of wants).
               </p>
-              <div className="pt-2 space-y-2 text-xs text-white/60">
-                <p>• Every member starts with complimentary welcome credits to book their first session.</p>
-                <p>• Verified teaching releases points immediately to unlock high-level mentors.</p>
+              <div className="pt-2 space-y-2.5 text-xs text-white/80 bg-white/5 p-4 rounded-2xl border border-white/10">
+                <p className="flex items-start gap-2">
+                  <span className="text-amber-400 font-bold font-mono">1.</span>
+                  <span><strong>Spend 40 Coins to Learn:</strong> Learn from any mentor even if they do not need your specific skill.</span>
+                </p>
+                <p className="flex items-start gap-2">
+                  <span className="text-emerald-400 font-bold font-mono">2.</span>
+                  <span><strong>Get 40 Coins to Teach:</strong> Earn 40 coins whenever you teach someone, then spend those 40 coins on whatever you want to learn next.</span>
+                </p>
+                <p className="flex items-start gap-2">
+                  <span className="text-[#3d9be9] font-bold font-mono">3.</span>
+                  <span><strong>Direct 1:1 Barter (0 Coins):</strong> When double coincidence exists, swap skill-for-skill directly without spending a single coin!</span>
+                </p>
               </div>
             </div>
           </div>

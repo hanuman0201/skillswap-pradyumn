@@ -41,6 +41,7 @@ import {
   BarterPeerInfo,
   FinalizedBarterSwap,
 } from './SkillBarterConfirmModal';
+import { WhatsAppMessenger } from './WhatsAppMessenger';
 
 type TeachTabId =
   | 'studio'
@@ -1184,35 +1185,12 @@ export function CommentThread({ initialComments, addCommentAction }) {
           {/* TAB 6: STUDENT CHAT                                  */}
           {/* ==================================================== */}
           {activeTab === 'messages' && (
-            <div className="p-6 rounded-2xl border border-white/15 bg-white/[0.03] backdrop-blur-2xl max-w-4xl mx-auto">
-              <h3 className="text-xl font-serif font-bold text-white mb-4">
-                Peer Mentoring Inbox
-              </h3>
-              <div className="space-y-3 mb-6 max-h-80 overflow-y-auto pr-2">
-                <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 text-xs">
-                  <div className="font-semibold text-white mb-1">Maya Tanaka &bull; Yesterday</div>
-                  <p className="text-white/80">
-                    &ldquo;Hey Alex! For our Next.js session tomorrow, I prepared an example repo with slow SSR hydration. Excited to swap it for Japanese pitch accent training!&rdquo;
-                  </p>
-                </div>
-                <div className="p-3.5 rounded-xl bg-[#3d9be9]/10 border border-[#3d9be9]/20 text-xs text-right">
-                  <div className="font-semibold text-[#3d9be9] mb-1">You (Alex) &bull; 2 hours ago</div>
-                  <p className="text-white/90">
-                    &ldquo;Perfect Maya! I’ll show you how Server Actions decouple client-side execution cleanly. See you at 4:00 PM EST.&rdquo;
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Type a response to Maya..."
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:outline-none focus:border-[#3d9be9]"
-                />
-                <button className="px-4 py-2.5 rounded-xl bg-[#3d9be9] text-white text-xs font-semibold flex items-center gap-1.5">
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Send</span>
-                </button>
-              </div>
+            <div className="max-w-5xl mx-auto">
+              <WhatsAppMessenger
+                currentUser={currentUser}
+                onUpdateUser={onUpdateUser}
+                variant="full"
+              />
             </div>
           )}
 

@@ -39,6 +39,7 @@ import {
   BarterPeerInfo,
   FinalizedBarterSwap,
 } from './SkillBarterConfirmModal';
+import { WhatsAppMessenger } from './WhatsAppMessenger';
 
 export type LearnTabId =
   | 'overview'
@@ -355,12 +356,18 @@ export const LearnPage: React.FC<LearnPageProps> = ({
               onClick={onBackToHome}
               className="flex items-center gap-2 group cursor-pointer text-left"
             >
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#ff5733] to-[#e63e15] flex items-center justify-center text-white shadow-md shadow-[#ff5733]/20 group-hover:scale-105 transition-transform">
-                <Sparkles className="w-4 h-4 text-white" />
+              <div
+                className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#ff5733] to-[#e63e15] flex items-center justify-center shadow-md shadow-[#ff5733]/20 group-hover:scale-105 transition-transform"
+                style={{ color: '#08f7bf' }}
+              >
+                <Sparkles className="w-4 h-4" />
               </div>
               <div>
                 <span className="font-bold text-sm tracking-tight block">SkillSpace</span>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-[#ff5733]">
+                <span
+                  className="text-[10px] font-mono uppercase tracking-widest block"
+                  style={{ color: '#08f7bf' }}
+                >
                   Learn Studio
                 </span>
               </div>
@@ -524,12 +531,15 @@ export const LearnPage: React.FC<LearnPageProps> = ({
         {/* Top Header Bar */}
         <header className="px-6 lg:px-10 py-5 border-b border-white/10 flex items-center justify-between backdrop-blur-md sticky top-0 z-20 bg-black/40">
           <div>
-            <span className="text-[11px] font-mono uppercase tracking-widest text-[#ff5733] block mb-1">
-              {activeTab === 'overview' && 'LEARNING HUB &bull; DASHBOARD'}
-              {activeTab === 'cointrade' && 'SKILLCOIN EXCHANGE &bull; TRADE MARKET'}
-              {activeTab === 'skillswap' && 'DIRECT 1:1 BARTER &bull; DIRECTORY'}
-              {activeTab === 'courses' && 'CURATED CURRICULUM &bull; TRACKS'}
-              {activeTab === 'messages' && 'COLLABORATION &bull; SESSIONS'}
+            <span
+              className="text-[11px] font-mono uppercase tracking-widest block mb-1"
+              style={{ color: '#08f7bf' }}
+            >
+              {activeTab === 'overview' && 'LEARNING HUB • DASHBOARD'}
+              {activeTab === 'cointrade' && 'SKILLCOIN EXCHANGE • TRADE MARKET'}
+              {activeTab === 'skillswap' && 'DIRECT 1:1 BARTER • DIRECTORY'}
+              {activeTab === 'courses' && 'CURATED CURRICULUM • TRACKS'}
+              {activeTab === 'messages' && 'COLLABORATION • SESSIONS'}
             </span>
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-white tracking-tight">
               {activeTab === 'overview' && 'Learning Overview'}
@@ -1329,53 +1339,12 @@ export const LearnPage: React.FC<LearnPageProps> = ({
           {/* TAB 5: MESSAGES                                      */}
           {/* ==================================================== */}
           {activeTab === 'messages' && (
-            <div className="max-w-4xl mx-auto rounded-3xl border border-white/15 bg-white/[0.03] backdrop-blur-2xl p-6 sm:p-8 flex flex-col h-[520px]">
-              <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#ff5733] text-white flex items-center justify-center font-bold text-xs font-mono">
-                    TM
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white">Tatsuo Mori (Japanese &bull; Web Dev)</h4>
-                    <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Active Now &bull; Pre-Session Chat
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-amber-400 flex items-center gap-1">
-                    <Coins className="w-3.5 h-3.5" /> 25 Coins Escrowed
-                  </span>
-                </div>
-              </div>
-
-              {/* Chat Thread */}
-              <div className="flex-1 overflow-y-auto space-y-3 pr-2 text-xs">
-                <div className="bg-white/5 p-3 rounded-2xl rounded-tl-sm max-w-md text-white/80">
-                  Konnichiwa! Looking forward to our session on Friday. I have prepared the pitch accent charts for Tokyo dialect.
-                </div>
-                <div className="bg-[#ff5733]/20 border border-[#ff5733]/30 p-3 rounded-2xl rounded-tr-sm max-w-md ml-auto text-white">
-                  Awesome! I also listed my Next.js 15 curriculum on the Coin Trade Exchange for 30 SkillCoins.
-                </div>
-                <div className="bg-white/5 p-3 rounded-2xl rounded-tl-sm max-w-md text-white/80">
-                  Great! The 25 SkillCoins for our Japanese session are securely held in escrow until we finish the call.
-                </div>
-              </div>
-
-              {/* Chat Input */}
-              <div className="mt-4 pt-3 border-t border-white/10 flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Type a message or proposal..."
-                  className="flex-1 bg-black/50 border border-white/15 focus:border-[#ff5733] rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/40 focus:outline-none"
-                />
-                <button className="px-4 py-2.5 rounded-xl bg-white text-black font-semibold text-xs flex items-center gap-1 hover:bg-white/90 transition-all cursor-pointer">
-                  <span>Send</span>
-                  <Send className="w-3 h-3" />
-                </button>
-              </div>
+            <div className="max-w-5xl mx-auto">
+              <WhatsAppMessenger
+                currentUser={currentUser}
+                onUpdateUser={onUpdateUser}
+                variant="full"
+              />
             </div>
           )}
         </main>

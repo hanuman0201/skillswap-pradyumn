@@ -287,6 +287,8 @@ export default function App() {
         {/* 4. Deep Dive Interactive Features */}
         <InteractiveFeatures
           onOpenAuth={() => handleOpenAuth('Join SkillSpace Network')}
+          currentUser={currentUser}
+          onUpdateUser={handleUpdateUser}
         />
 
         {/* 5. Community Trust & Philosophy */}
