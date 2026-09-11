@@ -3,6 +3,9 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   signOut,
   onAuthStateChanged,
   User,
@@ -114,12 +117,12 @@ export async function signInWithGoogle(): Promise<User> {
     if (result.user) {
       await saveUserProfileToFirestore({
         id: result.user.uid,
-        displayName: result.user.displayName || 'Community Member',
+        displayName: result.user.displayName || result.user.email?.split('@')[0] || 'Community Member',
         email: result.user.email || '',
         photoURL:
           result.user.photoURL ||
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-        bio: 'SkillSpace Community Member',
+          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
+        bio: 'SkillSpace Community Member. Open to peer skill trades and coin mentorship sessions.',
         coins: 240, // standard starter balance
         createdAt: new Date().toISOString(),
       });
@@ -127,6 +130,47 @@ export async function signInWithGoogle(): Promise<User> {
     return result.user;
   } catch (err: unknown) {
     console.error('Sign-in error:', err);
+    throw err;
+  }
+}
+
+export async function signInWithEmail(email: string, pass: string): Promise<User> {
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, pass);
+    return result.user;
+  } catch (err: unknown) {
+    console.error('Email sign-in error:', err);
+    throw err;
+  }
+}
+
+export async function signUpWithEmail(
+  email: string,
+  pass: string,
+  displayName: string
+): Promise<User> {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, pass);
+    if (displayName && result.user) {
+      await updateProfile(result.user, { displayName });
+    }
+    // Sync to Firestore
+    if (result.user) {
+      await saveUserProfileToFirestore({
+        id: result.user.uid,
+        displayName: displayName || email.split('@')[0] || 'Community Member',
+        email: result.user.email || email,
+        photoURL:
+          result.user.photoURL ||
+          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
+        bio: 'SkillSpace Community Member. Open to peer skill trades and coin mentorship sessions.',
+        coins: 240,
+        createdAt: new Date().toISOString(),
+      });
+    }
+    return result.user;
+  } catch (err: unknown) {
+    console.error('Email signup error:', err);
     throw err;
   }
 }
@@ -172,6 +216,34 @@ export async function saveUserProfileToFirestore(profile: LiveUserProfile): Prom
     if (!existing.exists()) {
       await setDoc(userRef, profile);
     }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function fetchUserProfileFromFirestore(userId: string): Promise<LiveUserProfile | null> {
+  const path = `users/${userId}`;
+  try {
+    const userRef = doc(db, 'users', userId);
+    const snap = await getDoc(userRef);
+    if (snap.exists()) {
+      return snap.data() as LiveUserProfile;
+    }
+    return null;
+  } catch (error) {
+    console.warn('Could not fetch user profile:', error);
+    return null;
+  }
+}
+
+export async function updateUserProfileInFirestore(
+  userId: string,
+  data: Partial<LiveUserProfile>
+): Promise<void> {
+  const path = `users/${userId}`;
+  try {
+    const userRef = doc(db, 'users', userId);
+    await setDoc(userRef, data, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }

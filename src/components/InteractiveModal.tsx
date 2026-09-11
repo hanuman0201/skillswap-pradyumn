@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, Sparkles, ArrowRight, LogIn, UserCheck, Shield, AlertCircle } from 'lucide-react';
+import { X, CheckCircle2, Sparkles, ArrowRight, LogIn, UserCheck, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { UserProfile, DEFAULT_USER } from '../types';
-import { signInWithGoogle, saveUserProfileToFirestore } from '../lib/firebase';
+import { UserProfile, DEFAULT_USER, createInitialUserProfile } from '../types';
+import {
+  signInWithGoogle,
+  signInWithEmail,
+  signUpWithEmail,
+  saveUserProfileToFirestore,
+  fetchUserProfileFromFirestore,
+} from '../lib/firebase';
 
 interface ModalProps {
   isOpen: boolean;
@@ -31,6 +37,7 @@ export const InteractiveModal: React.FC<ModalProps> = ({
   const [skillToLearn, setSkillToLearn] = useState(initialSkillToLearn);
   const [learnCoinsOffered, setLearnCoinsOffered] = useState<number>(20);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState('');
 
   React.useEffect(() => {
@@ -51,18 +58,18 @@ export const InteractiveModal: React.FC<ModalProps> = ({
     try {
       const user = await signInWithGoogle();
       if (onLoginSuccess && user) {
-        const appUser: UserProfile = {
-          ...DEFAULT_USER,
-          id: user.uid,
-          name: user.displayName || user.email?.split('@')[0] || 'Community Member',
-          email: user.email || '',
-          initials: (user.displayName || user.email?.slice(0, 2) || 'SS').slice(0, 2).toUpperCase(),
-          avatar:
-            user.photoURL ||
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-          coins: 240, // Standard starter balance
-          credits: 240,
-        };
+        const live = await fetchUserProfileFromFirestore(user.uid);
+        const appUser: UserProfile = createInitialUserProfile(
+          user.uid,
+          user.email || '',
+          live?.displayName || user.displayName || undefined,
+          live?.photoURL || user.photoURL || undefined
+        );
+        if (live?.bio) appUser.bio = live.bio;
+        if (live?.coins !== undefined) {
+          appUser.coins = live.coins;
+          appUser.credits = live.coins;
+        }
         onLoginSuccess(appUser);
         onClose();
       }
@@ -76,51 +83,95 @@ export const InteractiveModal: React.FC<ModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
+    setIsSubmitting(true);
+    setAuthError('');
 
-    if (onLoginSuccess) {
-      const newUser: UserProfile = {
-        ...DEFAULT_USER,
-        id: `usr_${Date.now()}`,
-        name: name.trim() || email.split('@')[0] || 'SkillSpace Member',
-        email: email.trim(),
-        initials: (name.trim() || email.slice(0, 2)).slice(0, 2).toUpperCase(),
-        coins: 180,
-        skillsToTeach: skillToTeach
+    try {
+      if (authMode === 'login') {
+        const firebaseUser = await signInWithEmail(email.trim(), password);
+        const live = await fetchUserProfileFromFirestore(firebaseUser.uid);
+        const appUser = createInitialUserProfile(
+          firebaseUser.uid,
+          firebaseUser.email || email.trim(),
+          live?.displayName || firebaseUser.displayName || undefined,
+          live?.photoURL || firebaseUser.photoURL || undefined
+        );
+        if (live?.bio) appUser.bio = live.bio;
+        if (live?.coins !== undefined) {
+          appUser.coins = live.coins;
+          appUser.credits = live.coins;
+        }
+        onLoginSuccess?.(appUser);
+        onClose();
+        return;
+      } else {
+        // Sign up flow
+        const firebaseUser = await signUpWithEmail(
+          email.trim(),
+          password,
+          name.trim() || email.split('@')[0]
+        );
+
+        const teachSkills = skillToTeach.trim()
           ? [
               {
                 id: `t_${Date.now()}`,
-                name: skillToTeach,
+                name: skillToTeach.trim(),
                 level: 'Advanced',
                 sessionsCount: 0,
                 coinsWanted: Number(teachCoinsWanted) || 25,
-                tradeMode: 'both',
+                tradeMode: 'both' as const,
               },
-              ...DEFAULT_USER.skillsToTeach,
             ]
-          : DEFAULT_USER.skillsToTeach,
-        skillsToLearn: skillToLearn
+          : [];
+
+        const learnSkills = skillToLearn.trim()
           ? [
               {
                 id: `l_${Date.now()}`,
-                name: skillToLearn,
+                name: skillToLearn.trim(),
                 target: 'Mastery through 1-on-1 swaps & coin sessions',
-                progress: 15,
+                progress: 10,
                 coinsOffered: Number(learnCoinsOffered) || 20,
-                tradeMode: 'both',
+                tradeMode: 'both' as const,
               },
-              ...DEFAULT_USER.skillsToLearn,
             ]
-          : DEFAULT_USER.skillsToLearn,
-      };
-      onLoginSuccess(newUser);
-      onClose();
-      return;
-    }
+          : [];
 
-    setSubmitted(true);
+        const appUser = createInitialUserProfile(
+          firebaseUser.uid,
+          email.trim(),
+          name.trim() || undefined,
+          undefined,
+          teachSkills,
+          learnSkills
+        );
+
+        onLoginSuccess?.(appUser);
+        onClose();
+        return;
+      }
+    } catch (err: unknown) {
+      console.error('Email auth failed:', err);
+      let msg = 'Authentication failed. Please check credentials.';
+      if (err instanceof Error) {
+        if (err.message.includes('invalid-credential') || err.message.includes('user-not-found')) {
+          msg = 'Invalid email or password. If you don’t have an account, switch to "Sign Up" above.';
+        } else if (err.message.includes('email-already-in-use')) {
+          msg = 'This email already has an account. Please switch to "Log In" above.';
+        } else if (err.message.includes('weak-password')) {
+          msg = 'Password must be at least 6 characters.';
+        } else {
+          msg = err.message;
+        }
+      }
+      setAuthError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleQuickDemoLogin = () => {
@@ -137,6 +188,7 @@ export const InteractiveModal: React.FC<ModalProps> = ({
     setPassword('');
     setSkillToTeach('');
     setSkillToLearn('');
+    setAuthError('');
     onClose();
   };
 
@@ -297,36 +349,10 @@ export const InteractiveModal: React.FC<ModalProps> = ({
                   </span>
                 </button>
 
-                {/* Quick 1-Click Demo Login Banner */}
-                <div className="p-3 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-all mb-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={DEFAULT_USER.avatar}
-                      alt={DEFAULT_USER.name}
-                      className="w-9 h-9 rounded-full object-cover border border-white/30"
-                    />
-                    <div>
-                      <div className="text-xs font-semibold text-white">
-                        Quick Demo Login
-                      </div>
-                      <div className="text-[11px] font-mono text-[#3d9be9]">
-                        Alex Rivers (Senior Mentor &bull; 250 pts)
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleQuickDemoLogin}
-                    className="px-3 py-1.5 rounded-xl bg-white text-black text-xs font-semibold hover:bg-white/90 transition-all cursor-pointer whitespace-nowrap shadow-sm"
-                  >
-                    Instant Login
-                  </button>
-                </div>
-
                 <div className="relative flex py-2 items-center mb-4">
                   <div className="flex-grow border-t border-white/10"></div>
                   <span className="flex-shrink mx-3 text-[10px] font-mono text-white/40 uppercase tracking-wider">
-                    Or with email
+                    Or with email & password
                   </span>
                   <div className="flex-grow border-t border-white/10"></div>
                 </div>
@@ -437,14 +463,33 @@ export const InteractiveModal: React.FC<ModalProps> = ({
 
                   <button
                     type="submit"
-                    className="w-full mt-3 flex items-center justify-center gap-2 rounded-full bg-[#3d9be9] py-3 text-sm font-medium text-white hover:bg-[#2a7dd7] transition-all shadow-lg shadow-blue-500/20 cursor-pointer"
+                    disabled={isSubmitting || googleLoading}
+                    className="w-full mt-3 flex items-center justify-center gap-2 rounded-full bg-[#3d9be9] py-3 text-sm font-medium text-white hover:bg-[#2a7dd7] transition-all shadow-lg shadow-blue-500/20 cursor-pointer disabled:opacity-50"
                   >
-                    <span>
-                      {authMode === 'login' ? 'Log In & View Profile' : 'Create Account & Open Profile'}
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
+                    {isSubmitting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span>
+                          {authMode === 'login' ? 'Log In & View Profile' : 'Create Account & Open Profile'}
+                        </span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 </form>
+
+                {/* Optional Demo Preview */}
+                <div className="mt-4 pt-3 border-t border-white/10 text-center">
+                  <button
+                    type="button"
+                    onClick={handleQuickDemoLogin}
+                    className="text-[11px] font-mono text-white/40 hover:text-white/80 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Developer Demo Preview:</span>
+                    <span className="text-[#3d9be9] underline">Load Alex Rivers test profile</span>
+                  </button>
+                </div>
               </div>
             )}
           </motion.div>

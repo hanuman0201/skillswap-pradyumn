@@ -15,8 +15,13 @@ import { InteractiveModal } from './components/InteractiveModal';
 import { TeachModal } from './components/TeachModal';
 import { LiveMarketplace } from './components/LiveMarketplace';
 import { CreateListingModal } from './components/CreateListingModal';
-import { UserProfile, DEFAULT_USER } from './types';
-import { auth, signOutUser } from './lib/firebase';
+import { UserProfile, DEFAULT_USER, createInitialUserProfile } from './types';
+import {
+  auth,
+  signOutUser,
+  fetchUserProfileFromFirestore,
+  updateUserProfileInFirestore,
+} from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
 export default function App() {
@@ -33,7 +38,12 @@ export default function App() {
     try {
       const saved = localStorage.getItem('skillspace_user');
       if (saved) {
-        return JSON.parse(saved) as UserProfile;
+        const parsed = JSON.parse(saved) as UserProfile;
+        // If an old stale demo user is in storage, ignore it
+        if (parsed.id === 'usr_001' && parsed.email === 'alex.rivers@skillspace.io') {
+          return null;
+        }
+        return parsed;
       }
     } catch {
       // ignore
@@ -50,29 +60,39 @@ export default function App() {
 
   // Sync with real Firebase Auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setCurrentUser((prev) => {
-          if (prev && prev.id === firebaseUser.uid) return prev;
-          const userObj: UserProfile = {
-            ...DEFAULT_USER,
-            id: firebaseUser.uid,
-            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Community Member',
-            email: firebaseUser.email || '',
-            initials: (firebaseUser.displayName || firebaseUser.email?.slice(0, 2) || 'SS')
-              .slice(0, 2)
-              .toUpperCase(),
-            avatar:
-              firebaseUser.photoURL ||
-              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-            coins: prev?.coins ?? 240,
-            credits: prev?.credits ?? 240,
-          };
-          try {
-            localStorage.setItem('skillspace_user', JSON.stringify(userObj));
-          } catch {}
-          return userObj;
-        });
+        const live = await fetchUserProfileFromFirestore(firebaseUser.uid);
+        const userObj: UserProfile = createInitialUserProfile(
+          firebaseUser.uid,
+          firebaseUser.email || '',
+          live?.displayName || firebaseUser.displayName || undefined,
+          live?.photoURL || firebaseUser.photoURL || undefined
+        );
+        if (live?.bio) userObj.bio = live.bio;
+        if (live?.coins !== undefined) {
+          userObj.coins = live.coins;
+          userObj.credits = live.coins;
+        }
+
+        // Preserve any custom skills or bio saved in session for this specific UID
+        try {
+          const saved = localStorage.getItem('skillspace_user');
+          if (saved) {
+            const parsed = JSON.parse(saved) as UserProfile;
+            if (parsed && parsed.id === firebaseUser.uid) {
+              if (parsed.skillsToTeach?.length) userObj.skillsToTeach = parsed.skillsToTeach;
+              if (parsed.skillsToLearn?.length) userObj.skillsToLearn = parsed.skillsToLearn;
+              if (parsed.bio) userObj.bio = parsed.bio;
+              if (parsed.location) userObj.location = parsed.location;
+            }
+          }
+        } catch {}
+
+        setCurrentUser(userObj);
+        try {
+          localStorage.setItem('skillspace_user', JSON.stringify(userObj));
+        } catch {}
       }
     });
     return () => unsubscribe();
@@ -108,14 +128,10 @@ export default function App() {
   };
 
   const navigateToProfile = () => {
-    // If not logged in, log in with demo user or show login modal
+    // If not logged in, prompt user to log in instead of force-assigning Alex Rivers
     if (!currentUser) {
-      setCurrentUser(DEFAULT_USER);
-      try {
-        localStorage.setItem('skillspace_user', JSON.stringify(DEFAULT_USER));
-      } catch {
-        // ignore
-      }
+      handleOpenAuth('Sign in to view your profile');
+      return;
     }
     setCurrentView('profile');
     window.location.hash = '#profile';
@@ -136,8 +152,10 @@ export default function App() {
       // ignore
     }
     setModalOpen(false);
-    // Navigate straight to user profile as requested
-    navigateToProfile();
+    // Navigate straight to user profile
+    setCurrentView('profile');
+    window.location.hash = '#profile';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleLogout = async () => {
@@ -163,12 +181,19 @@ export default function App() {
     setCreateListingModalOpen(true);
   };
 
-  const handleUpdateUser = (updatedUser: UserProfile) => {
+  const handleUpdateUser = async (updatedUser: UserProfile) => {
     setCurrentUser(updatedUser);
     try {
       localStorage.setItem('skillspace_user', JSON.stringify(updatedUser));
-    } catch {
-      // ignore
+      if (auth.currentUser && auth.currentUser.uid === updatedUser.id) {
+        await updateUserProfileInFirestore(updatedUser.id, {
+          displayName: updatedUser.name,
+          bio: updatedUser.bio,
+          coins: updatedUser.coins,
+        });
+      }
+    } catch (e) {
+      console.warn('Update user error:', e);
     }
   };
 
@@ -274,6 +299,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#070709] text-white">
         <ProfilePage
+          key={currentUser?.id || 'guest'}
           user={currentUser || DEFAULT_USER}
           onUpdateUser={handleUpdateUser}
           onLogout={handleLogout}

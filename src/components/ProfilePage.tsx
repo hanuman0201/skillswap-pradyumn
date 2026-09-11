@@ -51,6 +51,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const [nameInput, setNameInput] = useState(user.name);
   const [locationInput, setLocationInput] = useState(user.location);
 
+  React.useEffect(() => {
+    setBioInput(user.bio);
+    setNameInput(user.name);
+    setLocationInput(user.location);
+  }, [user.id, user.name, user.bio, user.location]);
+
   // Add Skill to Teach Modal
   const [showAddTeachModal, setShowAddTeachModal] = useState(false);
   const [newTeachSkill, setNewTeachSkill] = useState('');

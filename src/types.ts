@@ -222,3 +222,39 @@ export const DEFAULT_USER: UserProfile = {
   ],
 };
 
+export function createInitialUserProfile(
+  id: string,
+  email: string,
+  name?: string,
+  photoURL?: string,
+  customSkillsToTeach?: UserProfile['skillsToTeach'],
+  customSkillsToLearn?: UserProfile['skillsToLearn']
+): UserProfile {
+  const cleanName = name?.trim() || (email ? email.split('@')[0] : 'Community Member');
+  const initials = (cleanName.slice(0, 2) || 'SS').toUpperCase();
+  const avatar =
+    photoURL ||
+    `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80`;
+
+  return {
+    id,
+    name: cleanName,
+    email: email || '',
+    avatar,
+    initials,
+    bio: 'SkillSpace Community Member. Open to peer skill trades and coin mentorship sessions.',
+    location: 'Remote / Global',
+    memberSince: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+    credits: 240,
+    coins: 240,
+    hoursTaught: 0,
+    hoursLearned: 0,
+    rating: 5.0,
+    reviewCount: 0,
+    skillsToTeach: customSkillsToTeach && customSkillsToTeach.length > 0 ? customSkillsToTeach : [],
+    skillsToLearn: customSkillsToLearn && customSkillsToLearn.length > 0 ? customSkillsToLearn : [],
+    upcomingSessions: [],
+    reviews: [],
+  };
+}
+
